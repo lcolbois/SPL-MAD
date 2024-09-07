@@ -45,9 +45,9 @@ class TrainDataset(Dataset):
 
 class TestDataset(Dataset):
 
-    def __init__(self, csv_file, input_shape=(224, 224)):
+    def __init__(self, dataframe, input_shape=(224, 224)):
+        self.dataframe = dataframe[['path','attack']].astype({'path': str})
         #self.image_dir = image_dir
-        self.dataframe = pd.read_csv(csv_file)
         self.composed_transformations = albumentations.Compose([
             albumentations.SmallestMaxSize(max_size=input_shape[0]),
             albumentations.CenterCrop(height=input_shape[0], width=input_shape[0]),
@@ -59,15 +59,16 @@ class TestDataset(Dataset):
         return len(self.dataframe)
 
     def __getitem__(self, idx):
-        img_path = self.dataframe.iloc[idx, 0]
-        label_str = self.dataframe.iloc[idx, 1]
+        item = self.dataframe.iloc[idx]
+        img_path = item['path']
+        label_str = item['attack']
         image = cv2.imread(img_path)
-        label = 0 if label_str == 'bonafide' else 1
+        label = 0 if label_str.startswith('bonafide') else 1
 
         image = self.composed_transformations(image=image)['image']
 
         return {
             "images": image,
             "labels": torch.tensor(label, dtype = torch.float),
-            "img_path": img_path
+            "img_path": img_path,
         }
